@@ -104,6 +104,8 @@ int reg_name_to_number(const char *name)
 	}
 	return -1;
 }
+
+// 这段代码从libunwind中复制
 static const int8_t remap_regs[] =
     {
       [RAX]    = offsetof(struct user_regs_struct, rax) / sizeof(long),
@@ -125,6 +127,10 @@ static const int8_t remap_regs[] =
       [RIP]    = offsetof(struct user_regs_struct, rip) / sizeof(long),
     };
 
+/**
+ * 解析寄存器信息
+ * 格式  rsp:0xabcd rip:0x1234  rax:0x1111
+ */
 int parse_regs(char *line, elf_gregset_t regset)
 {
   /* format : RSP:0x123 RIP:0x3123 */
@@ -193,11 +199,21 @@ static void dumphex(const char data[], size_t size, std::string &hex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * 计算NOTE program header实际大小
+ * program header实际包含name和desc两个字段
+ */
 inline static uint64_t note_size(Elf64_Nhdr *hdr)
 {
 	return sizeof(*hdr) + ALIGN(hdr->n_namesz, 4) + ALIGN(hdr->n_descsz, 4);
 }
 
+/**
+ * 判断hdr是否还在有效范围内
+ * @param hdr header起始地址
+ * @param end 整个NOTE program header最后的内存地址
+ * @note 就是判断hdr本身结构体大小加上自己所占内存有没有超出范围
+ */
 inline static bool note_fits(Elf64_Nhdr *hdr, char *end)
 {
 	char *const begin = (char *)hdr;
@@ -207,11 +223,17 @@ inline static bool note_fits(Elf64_Nhdr *hdr, char *end)
 	return size >= note_size(hdr);
 }
 
+/**
+ * 获取note header的desc字段内存起始地址
+ */
 char *note_desc(Elf64_Nhdr *hdr)
 {
 	return (char *)hdr + sizeof(*hdr) + ALIGN(hdr->n_namesz, 4);
 }
 
+/**
+ * 表示一个协程/线程在core中的数据，目前只有寄存器信息
+ */
 struct coroutine_t
 {
 	elf_gregset_t  regset;
@@ -503,15 +525,15 @@ private:
 	int           			m_core_fd;
 
 	Elf64_Ehdr    			m_elf_header;	  // elf header
-	Elf64_Phdr    			m_note_phdr;    // PT_NOTE program header
-	off_t         			m_note_phdr_offset = off_t(-1);
+	Elf64_Phdr    			m_note_phdr;      // PT_NOTE program header
+	off_t         			m_note_phdr_offset = off_t(-1);  // PT_NOTE program header在core文件中的偏移量
 
-	std::unique_ptr<char>  	m_note_segment;
-	char *        			m_first_thread_addr;
-	uint64_t      			m_first_thread_size;
-	__pid_t       			m_max_pid;
+	std::unique_ptr<char>  	        m_note_segment;      // note 整个内存
+	char *        			m_first_thread_addr; // core文件中第一个线程的起始内存位置
+	uint64_t      			m_first_thread_size; // core文件中第一个线程的内存大小
+	__pid_t       			m_max_pid;           // 最大的pid值(LWP)，如果LWP值相同，gdb会认为同一个线程，将会不展示
 
-	std::deque<coroutine_t> m_threads_extra;	
+	std::deque<coroutine_t>         m_threads_extra;     // 协程信息解析出来就放在这里
 };
 
 int main(int argc, char *argv[])
