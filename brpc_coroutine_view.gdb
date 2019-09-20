@@ -1,12 +1,12 @@
-define mdb_comment
+define gdb_comment
 	
 end
 
-define mdb_print_fcontext_regs
+define brpc_print_fcontext_regs
 	set $fcontext = (long)$arg0
 	
-	mdb_comment use prefix 'reg_' not $rip/$rbp, because that 'set $rip=xxx' 
-	mdb_comment in gdb will try to set the register value
+	gdb_comment use prefix 'reg_' not $rip/$rbp, because that 'set $rip=xxx' 
+	gdb_comment in gdb will try to set the register value
 	set $reg_rsp = (long)($fcontext + 0x40)
 	set $reg_rip = *((long *)($fcontext + 0x38))
 	set $reg_rbp = *((long *)($fcontext + 0x30))
@@ -19,14 +19,14 @@ define mdb_print_fcontext_regs
 	printf "rsp:0x%lx rip:0x%lx rbp:0x%lx rbx:0x%lx r15:0x%lx r14:0x%lx r13:0x%lx r12:0x%lx\n", $reg_rsp, $reg_rip, $reg_rbp, $reg_rbx, $reg_r15, $reg_r14, $reg_r13, $reg_r12
 end
 
-define mdb_print_bthreads
+define brpc_print_bthreads
 	set $ngroup = butil::ResourcePool<bthread::TaskMeta>::_ngroup.val
 	set $block_groups = butil::ResourcePool<bthread::TaskMeta>::_block_groups
 
-	mdb_comment see butil::ResourcePool<T>::describe_resources
+	gdb_comment see butil::ResourcePool<T>::describe_resources
 	set $i = 0
 	while $i < $ngroup
-		mdb_comment bg = BlockGroup *
+		gdb_comment bg = BlockGroup *
 		set $bg = $block_groups[$i].val
 		set $i = $i + 1
 		set $nblock = $bg.nblock._M_i
@@ -36,7 +36,7 @@ define mdb_print_bthreads
 		
 		set $j = 0
 		while $j < $nblock
-			mdb_comment $b = butil::ResourcePool<bthread::TaskMeta>::Block *
+			gdb_comment $b = butil::ResourcePool<bthread::TaskMeta>::Block *
 			set $b = $bg.blocks[$j]._M_b._M_p
 			set $j = $j + 1
 			set $nitem = $b.nitem
@@ -53,17 +53,17 @@ define mdb_print_bthreads
 				
 				set $task_rip = *((long *)($task_meta.stack.context + 0x38))
 				if $task_rip == $task_meta.fn
-					mdb_comment this is the initial 'rip' value(reference make_fcontext)
-					mdb_comment this task may not in RUNNING state or in-thread context
+					gdb_comment this is the initial 'rip' value(reference make_fcontext)
+					gdb_comment this task may not in RUNNING state or in-thread context
 					loop_continue
 				end
 				
-				mdb_print_fcontext_regs $task_meta.stack.context
+				brpc_print_fcontext_regs $task_meta.stack.context
 			end
 		end
 	end
 end
 
-document mdb_print_bthreads
+document brpc_print_bthreads
 	printf "print all bthread's registers that may be in swapout state"
 end
