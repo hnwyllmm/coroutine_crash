@@ -20,3 +20,4 @@ rsp:0x7f1c31a677a0 rip:0x7f1c7aa52eca rbp:0x7f1cf319ad40 rbx:0xffffffff r15:0x7f
 ```
 ## 大概原理
 core文件中使用PT_NOTE program 段保存线程信息，我将原有的线程信息复制出来，将寄存器设置到线程信息中。最后将原有的和复制出来的新线程信息追加到core文件尾部，然后修正PT_NOTE program header的文件偏移量和大小
+更多请参考[core文件中查看切换出去协程的栈信息](https://blog.csdn.net/hnwyllmm/article/details/101057074)
