@@ -34,3 +34,6 @@ rsp:0x7f5b0b2e1ad0 rip:0x7f5b283635d8 rbp:0x7f5b0b2e1b30 rbx:0x7f5b4b722000 r15:
 warning: Error executing canned sequence of commands.
 ```
 脚本执行的时候可能会打印最后的那个告警信息，目前不知道解决方法，不过经过测试确实会遍历所有可能出现的协程。
+
+## 注意事项
+因为此工具直接在core文件上修改，所以如果出现异常，比如程序BUG，或操作系统宕机导致写入数据不完整，会破坏原有core文件。所以在必要情况下，先备份core文件再操作。
